@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt');
+const axios = require('axios');
 const User = require('../models/userModels');
 require('dotenv').config();
 
@@ -25,7 +26,13 @@ const registerUser = async (req, res) => {
       phone,
     });
 
-    res.status(201).json({ message: 'User registered successfully' });
+  await axios.post('http://localhost:3001/assign-role', {
+    userId: newUser.id,
+    roleName: 'Contributor'
+  });
+
+
+  res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ message: 'Server error.' });
