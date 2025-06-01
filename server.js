@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const sequelize = require('./config/database');
 require('dotenv').config();
 
@@ -8,8 +9,10 @@ const swaggerRoutes = require('./routes/swaggerRoutes');
 const app = express();
 app.use(express.json());
 
+app.use(cors());
+
 app.use('/user', userRoutes);
-app.use('/user', swaggerRoutes); 
+app.use('/user', swaggerRoutes);
 
 const PORT = process.env.PORT || 3000;
 
