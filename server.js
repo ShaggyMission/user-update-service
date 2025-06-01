@@ -1,14 +1,17 @@
 const express = require('express');
 const sequelize = require('./config/database');
-const { registerUser } = require('./controllers/userController');
 require('dotenv').config();
+
+const userRoutes = require('./routes/userRoutes');
+const swaggerRoutes = require('./routes/swaggerRoutes');
 
 const app = express();
 app.use(express.json());
 
-app.post('/register', registerUser);
+app.use('/user', userRoutes);
+app.use('/', swaggerRoutes); 
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, async () => {
   try {
