@@ -9,7 +9,7 @@ const app = express();
 app.use(express.json());
 
 app.use('/user', userRoutes);
-app.use('/', swaggerRoutes); 
+app.use('/user', swaggerRoutes); 
 
 const PORT = process.env.PORT || 3000;
 

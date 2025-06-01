@@ -1,18 +1,23 @@
 openapi: 3.0.0
 info:
   title: User Registration API
-  version: "1.0.0"
-  description: API para el registro de usuarios y asignación de roles por defecto.
-servers:
-  - url: http://localhost:3000/api/users
-    description: Servidor local
+  version: 1.0.0
+  description: >
+    This API allows new users to register by providing personal and contact information.  
+    **All fields marked with a red asterisk (*) are required.**  
+    If any required field is missing or invalid, the server will respond with a `400 Bad Request` error.  
+    If the email is already registered, a `409 Conflict` will be returned.
 
 paths:
-  /register:
+  /user/register:
     post:
-      summary: Registrar un nuevo usuario
+      summary: Register a new user
+      description: >
+        Creates a new user account with the provided details.  
+        Passwords are securely hashed before being stored.  
+        A default role ("Contributor") is automatically assigned to the new user upon successful registration.
       tags:
-        - Usuarios
+        - User
       requestBody:
         required: true
         content:
@@ -28,20 +33,70 @@ paths:
               properties:
                 firstName:
                   type: string
+                  example: John
+                  description: The user's first name. **Required.** Cannot be empty.
                 lastName:
                   type: string
+                  example: Doe
+                  description: The user's last name. **Required.** Cannot be empty.
                 email:
                   type: string
+                  example: john.doe@example.com
+                  format: email
+                  description: >
+                    The user's email address. **Required.**  
+                    Must be in valid format and unique in the system.  
+                    If already registered, a `409 Conflict` error will occur.
                 password:
                   type: string
+                  example: MySecureP@ss123
+                  description: >
+                    The user's password. **Required.**  
+                    It will be encrypted before being saved.
                 phone:
                   type: string
+                  example: "+1234567890"
+                  description: >
+                    The user's phone number. **Required.**  
+                    Should be in valid international format.
       responses:
-        "201":
-          description: Usuario registrado con éxito
-        "400":
-          description: Faltan campos obligatorios
-        "409":
-          description: El correo ya está registrado
-        "500":
-          description: Error interno del servidor
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User registered successfully
+        '400':
+          description: Bad Request – Missing or invalid fields
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: All fields are required.
+        '409':
+          description: Conflict – Email already registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Email is already registered.
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Server error.
