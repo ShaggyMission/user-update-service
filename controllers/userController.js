@@ -1,48 +1,34 @@
-const bcrypt = require('bcrypt');
-const axios = require('axios');
-const User = require('../models/userModels');
-const sequelize = require('../config/database');
-require('dotenv').config();
+const User = require('../models/User');
 
-const registerUser = async (req, res) => {
-  const t = await sequelize.transaction(); 
+exports.updateUser = async (req, res) => {
+  const { id } = req.params;
+  const { firstName, lastName, email, phone } = req.body;
 
   try {
-    const { firstName, lastName, email, password, phone } = req.body;
-
-    if (!firstName || !lastName || !email || !password || !phone) {
-      return res.status(400).json({ message: 'All fields are required.' });
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
 
-    const existingUser = await User.findOne({ where: { email }, transaction: t });
-    if (existingUser) {
-      await t.rollback();
-      return res.status(409).json({ message: 'Email is already registered.' });
-    }
+    user.firstName = firstName || user.firstName;
+    user.lastName = lastName || user.lastName;
+    user.email = email || user.email;
+    user.phone = phone || user.phone;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    await user.save();
 
-    const newUser = await User.create({
-      firstName,
-      lastName,
-      email,
-      password: hashedPassword,
-      phone,
-    }, { transaction: t });
-
-    const response = await axios.post('http://localhost:3001/roles/assign-role', {
-      userId: newUser.id,
-      roleName: 'Contributor'
+    res.status(200).json({
+      message: 'User profile updated successfully',
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone
+      }
     });
-
-    await t.commit();
-    res.status(201).json({ message: 'User registered successfully', userId: newUser.id });
-
   } catch (error) {
-    await t.rollback(); 
-    console.error('Registration error:', error);
-    res.status(500).json({ message: 'Server error. Could not complete registration.' });
+    console.error('Error updating user:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
-
-module.exports = { registerUser };

@@ -1,27 +1,19 @@
 const express = require('express');
 const cors = require('cors');
-const sequelize = require('./config/database');
-require('dotenv').config();
-
+const app = express();
 const userRoutes = require('./routes/userRoutes');
 const swaggerRoutes = require('./routes/swaggerRoutes');
-
-const app = express();
-app.use(express.json());
+const cookieParser = require('cookie-parser');
 
 app.use(cors());
+app.use(express.json());
+app.use(cookieParser());
 
-app.use('/user', userRoutes);
-app.use('/user', swaggerRoutes);
 
-const PORT = process.env.PORT || 3000;
+app.use('/users', userRoutes);     
+app.use('/users', swaggerRoutes);            
 
-app.listen(PORT, async () => {
-  try {
-    await sequelize.authenticate();
-    await sequelize.sync();
-    console.log(`User Registration Service running on port ${PORT}`);
-  } catch (err) {
-    console.error('DB connection error:', err);
-  }
+const PORT = process.env.PORT || 3004;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
