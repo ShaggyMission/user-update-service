@@ -1,34 +1,53 @@
 openapi: 3.0.0
 info:
-  title: User Registration API
+  title: User Profile Update Service API
   version: 1.0.0
   description: >
-    This API allows new users to register by providing personal and contact information.  
-    **All fields marked with a red asterisk (*) are required.**  
-    If any required field is missing or invalid, the server will respond with a `400 Bad Request` error.  
-    If the email is already registered, a `409 Conflict` will be returned.
+    This API provides user profile management functionality with secure authentication.  
+    The service allows authenticated users to update their profile information including
+    first name, last name, email, and phone number.  
+    **Authentication is required via JWT token stored in HTTP-only cookies.**  
+    All fields in the update request are optional - only provided fields will be updated.  
+    The service validates user existence and returns the updated profile information upon success.
+
+servers:
+  - url: http://localhost:3004
+    description: Development server
+
+security:
+  - cookieAuth: []
 
 paths:
   /users/profile/{id}:
     put:
-      summary: Update a user profile
+      summary: Update user profile information
       description: >
-        Updates the personal and contact information of an existing user.  
-        Only the fields provided in the request body will be updated.  
-        Authentication via JWT token is required.
+        Updates the profile information for a specific user identified by their ID.  
+        This endpoint requires authentication via JWT token stored in cookies.  
+        All request body fields are optional - the service will only update the fields that are provided.  
+        Existing values are preserved for any fields not included in the request.  
+        
+        **Authentication Flow:**
+        1. JWT token is extracted from the 'token' cookie
+        2. Token is validated and decoded to verify user authentication
+        3. User profile is located by the provided ID
+        4. Only the provided fields are updated, others remain unchanged
+        5. Updated profile information is returned (excluding sensitive data)
       tags:
-        - User
+        - User Profile
       security:
-        - bearerAuth: []
+        - cookieAuth: []
       parameters:
-        - in: path
-          name: id
+        - name: id
+          in: path
           required: true
+          description: The unique identifier of the user whose profile will be updated
           schema:
             type: string
-          description: The ID of the user whose profile is being updated.
+            example: "12345"
       requestBody:
         required: true
+        description: User profile fields to update. All fields are optional.
         content:
           application/json:
             schema:
@@ -36,25 +55,42 @@ paths:
               properties:
                 firstName:
                   type: string
-                  example: Jane
-                  description: The user's first name. Optional. If provided, cannot be empty.
+                  example: "John"
+                  description: User's first name. Optional field.
                 lastName:
                   type: string
-                  example: Smith
-                  description: The user's last name. Optional. If provided, cannot be empty.
+                  example: "Doe"
+                  description: User's last name. Optional field.
                 email:
                   type: string
-                  example: jane.smith@example.com
                   format: email
-                  description: >
-                    The user's email address. Optional.  
-                    Must be in valid format and unique in the system.
+                  example: "john.doe@example.com"
+                  description: User's email address. Optional field.
                 phone:
                   type: string
-                  example: "+0987654321"
-                  description: >
-                    The user's phone number. Optional.  
-                    Should be in valid international format.
+                  example: "+1234567890"
+                  description: User's phone number. Optional field.
+            examples:
+              full_update:
+                summary: Update all profile fields
+                value:
+                  firstName: "John"
+                  lastName: "Doe"
+                  email: "john.doe@example.com"
+                  phone: "+1234567890"
+              partial_update:
+                summary: Update only name fields
+                value:
+                  firstName: "Jane"
+                  lastName: "Smith"
+              email_only:
+                summary: Update only email
+                value:
+                  email: "newemail@example.com"
+              phone_only:
+                summary: Update only phone number
+                value:
+                  phone: "+0987654321"
       responses:
         '200':
           description: User profile updated successfully
@@ -65,27 +101,44 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: User profile updated successfully
+                    example: "User profile updated successfully"
                   user:
                     type: object
                     properties:
                       id:
                         type: string
-                        example: XyZ123AbC789
+                        example: "12345"
+                        description: User's unique identifier
                       firstName:
                         type: string
-                        example: Jane
+                        example: "John"
+                        description: User's updated first name
                       lastName:
                         type: string
-                        example: Smith
+                        example: "Doe"
+                        description: User's updated last name
                       email:
                         type: string
-                        example: jane.smith@example.com
+                        format: email
+                        example: "john.doe@example.com"
+                        description: User's updated email address
                       phone:
                         type: string
-                        example: "+0987654321"
-        '400':
-          description: Bad Request – Invalid or missing data
+                        example: "+1234567890"
+                        description: User's updated phone number
+              examples:
+                successful_update:
+                  summary: Profile updated successfully
+                  value:
+                    message: "User profile updated successfully"
+                    user:
+                      id: "67890"
+                      firstName: "Jane"
+                      lastName: "Smith"
+                      email: "jane.smith@example.com"
+                      phone: "+1555123456"
+        '401':
+          description: Unauthorized – No authentication token provided
           content:
             application/json:
               schema:
@@ -93,9 +146,29 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: Invalid input data.
+                    example: "Access denied. No token provided."
+              examples:
+                no_token:
+                  summary: Missing authentication token
+                  value:
+                    message: "Access denied. No token provided."
+        '403':
+          description: Forbidden – Invalid or expired authentication token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Invalid or expired token."
+              examples:
+                invalid_token:
+                  summary: Token validation failed
+                  value:
+                    message: "Invalid or expired token."
         '404':
-          description: Not Found – User does not exist
+          description: Not Found – User with specified ID does not exist
           content:
             application/json:
               schema:
@@ -103,9 +176,14 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: User not found.
+                    example: "User not found"
+              examples:
+                user_not_found:
+                  summary: User ID not found in database
+                  value:
+                    message: "User not found"
         '500':
-          description: Internal Server Error
+          description: Internal Server Error – Database or server error
           content:
             application/json:
               schema:
@@ -113,11 +191,76 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: Server error.
+                    example: "Internal server error"
+              examples:
+                server_error:
+                  summary: Database connection or processing error
+                  value:
+                    message: "Internal server error"
 
 components:
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: token
+      description: JWT authentication token stored as HTTP-only cookie
+
+  schemas:
+    UpdateUserRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          description: User's first name
+        lastName:
+          type: string
+          description: User's last name
+        email:
+          type: string
+          format: email
+          description: User's email address
+        phone:
+          type: string
+          description: User's phone number
+      description: All fields are optional for partial updates
+
+    UpdateUserResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Success confirmation message
+        user:
+          $ref: '#/components/schemas/UserProfile'
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          description: User's unique identifier
+        firstName:
+          type: string
+          description: User's first name
+        lastName:
+          type: string
+          description: User's last name
+        email:
+          type: string
+          format: email
+          description: User's email address
+        phone:
+          type: string
+          description: User's phone number
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error description
+
+tags:
+  - name: User Profile
+    description: User profile management operations requiring authentication
